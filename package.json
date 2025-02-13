@@ -6,7 +6,9 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
-    "ios": "expo run:ios"
+    "pod": "npx pod-install",
+    "ios": "expo run:ios",
+    "gen": " npx bare-pack --out app/main.bundle.js main.js --target ios-arm64 --target ios-arm64-simulator --target ios-x64-simulator --target android-arm --target android-arm64 --target android-ia32 --target android-x64 --linked"
   },
   "repository": {
     "type": "git",
@@ -19,6 +21,8 @@
   },
   "homepage": "https://github.com/holepunchto/bare-expo#readme",
   "dependencies": {
+    "@holepunchto/keet-backend": "17.4.1",
+    "@holepunchto/keet-backend-rpc": "1.2.0",
     "events": "3.3.0",
     "expo": "^52.0.17",
     "expo-build-properties": "^0.13.1",
@@ -26,15 +30,15 @@
     "expo-linking": "^7.0.3",
     "expo-router": "^4.0.11",
     "expo-system-ui": "^4.0.5",
+    "pear-inspect": "^1.2.3",
+    "random-access-memory": "6.2.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-native": "^0.76.3",
-    "react-native-bare-kit": "^0.4.0",
+    "react-native-bare-kit": "0.4.3",
     "react-native-safe-area-context": "^4.14.0",
-    "random-access-memory": "6.2.1",
     "tiny-buffer-rpc": "2.2.2",
-    "@holepunchto/keet-backend-rpc": "1.2.0",
-    "@holepunchto/keet-backend": "17.4.1"
+    "expo-file-system": "~18.0.10"
   },
   "devDependencies": {
     "@types/react": "^18.3.1",

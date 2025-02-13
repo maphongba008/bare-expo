@@ -1,21 +1,35 @@
+/* eslint-disable react-native/no-color-literals */
+/* eslint-disable react-native/no-inline-styles */
+/* eslint-disable react/jsx-no-bind */
+import React from 'react'
+import { TouchableOpacity, View, Text } from 'react-native'
+
 import createClient from '@holepunchto/keet-backend-rpc/client'
-import { useEffect } from 'react'
-import { Text } from 'react-native'
 import { Worklet } from 'react-native-bare-kit'
 import RPC from 'tiny-buffer-rpc'
+
+const FileSystem = require('expo-file-system')
+
+const documentDirectory = FileSystem.documentDirectory
+console.log({ documentDirectory })
+const storagePath = documentDirectory.substring(
+  'file://'.length,
+  documentDirectory.length
+)
+
 const source = require('./main.bundle')
 
 let _backend = null
 
-const getKeetBackend = () => {
+export const getKeetBackend = () => {
   return {
     api: _backend
   }
 }
 
-async function loadWorklet() {
+export async function loadWorklet() {
   const worklet = new Worklet()
-  await worklet.start('keet:/main.bundle', source)
+  await worklet.start('keet:/main.bundle', source, [storagePath, 'keet'])
   const rpc = new RPC((data) => worklet.IPC.write(data))
   worklet.IPC.on('data', (data) => rpc.recv(data))
 
@@ -28,13 +42,7 @@ async function loadWorklet() {
   // })
 }
 
-/* eslint-disable react-native/no-color-literals */
-/* eslint-disable react-native/no-inline-styles */
-/* eslint-disable react/jsx-no-bind */
-import React from 'react'
-import { TouchableOpacity, View } from 'react-native'
-
-const Button = ({ text, onPress }) => {
+const Button = ({ text, onPress }: any) => {
   return (
     <TouchableOpacity
       style={{
@@ -95,6 +103,15 @@ const TestApp = () => {
       />
 
       <Button
+        text='Get network'
+        onPress={async () => {
+          console.log('get network')
+          const network = await _backend.network.query()
+          console.log('network is', network)
+        }}
+      />
+
+      <Button
         text='Get identity'
         onPress={() => {
           getIdentity()
@@ -104,7 +121,7 @@ const TestApp = () => {
         onPress={async () => {
           const backendApi = getKeetBackend()
           const allRooms = await backendApi.api.core.getRecentRooms({})
-          console.log('get all rooms length', allRooms)
+          console.log('get all rooms length', allRooms.length)
           setAllRoomsId(allRooms.map((item) => item.roomId))
         }}
         text='Get all rooms'
