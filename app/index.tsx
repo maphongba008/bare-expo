@@ -11,11 +11,11 @@ import RPC from 'tiny-buffer-rpc'
 const FileSystem = require('expo-file-system')
 
 const documentDirectory = FileSystem.documentDirectory
-console.log({ documentDirectory })
 const storagePath = documentDirectory.substring(
   'file://'.length,
   documentDirectory.length
 )
+console.log({storagePath});
 
 const source = require('./main.bundle')
 
