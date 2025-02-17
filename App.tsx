@@ -1,7 +1,3 @@
-// without UI
-// import App from './app/index'
-
-// with UI
-import App from './app/ui'
+import App from './app/index'
 
 export default App

@@ -1,93 +1,63 @@
-/* eslint-disable react-native/no-color-literals */
 /* eslint-disable react-native/no-inline-styles */
-/* eslint-disable react/jsx-no-bind */
-import React from 'react'
-import { TouchableOpacity, View, Text } from 'react-native'
 
-import createClient from '@holepunchto/keet-backend-rpc/client'
-import { Worklet } from 'react-native-bare-kit'
-import RPC from 'tiny-buffer-rpc'
+import createClient from '@holepunchto/keet-backend-rpc/client';
+import * as FileSystem from 'expo-file-system';
+import React from 'react';
+import { Text, TouchableOpacity, View} from 'react-native';
+import {Worklet} from 'react-native-bare-kit';
+import RPC from 'tiny-buffer-rpc';
 
-const FileSystem = require('expo-file-system')
+const documentDirectory = FileSystem.documentDirectory!;
+console.log({ documentDirectory });
+const storagePath = documentDirectory.replace('file://', '');
 
-const documentDirectory = FileSystem.documentDirectory
-const storagePath = documentDirectory.substring(
-  'file://'.length,
-  documentDirectory.length
-)
-console.log({ storagePath });
+const source = require('./main.bundle');
 
-const source = require('./main.bundle')
+let _backend: any = null;
 
-let _backend = null
 
-export const getKeetBackend = () => {
-  return {
-    api: _backend
-  }
+export async function startWorklet() {
+  const worklet = new Worklet();
+  await worklet.start('keet:/main.bundle', source, [storagePath, 'keet']);
+  const rpc = new RPC(data => worklet.IPC.write(data));
+  worklet.IPC.on('data', data => rpc.recv(data));
+
+  const client = createClient(rpc);
+  _backend = client;
+  console.log('worklet started');
 }
 
-export async function loadWorklet() {
-  const worklet = new Worklet()
-  await worklet.start('keet:/main.bundle', source, [storagePath, 'keet'])
-  const rpc = new RPC((data) => worklet.IPC.write(data))
-  worklet.IPC.on('data', (data) => rpc.recv(data))
 
-  const client = createClient(rpc)
-  _backend = client
-  console.log('worklet started')
-  await new Promise(resolve => setTimeout(resolve, 100))
-}
+const Button = ({text, onPress}: any) => {
+  return (
+    <TouchableOpacity
+      style={{
+        paddingHorizontal: 8,
+        paddingVertical: 8,
+        borderRadius: 8,
+        backgroundColor: 'blue',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 8,
+      }}
+      onPress={onPress}>
+      <Text style={{color: '#FFF'}}>{text}</Text>
+    </TouchableOpacity>
+  );
+};
 
 const getStats = async () => {
   console.log('[GET_STATS] start')
-  const backend = getKeetBackend()
-  const stats = await backend.api.core.getStats()
+  const stats = await _backend.core.getStats()
   console.log('[GET_STATS] response', stats) // no response
 }
 
-const TestApp = () => {
-
-  const subscribeRecentRooms = async () => {
-    console.log('[SUBSCRIBE_RECENT_ROOM] start')
-    const backendApi = getKeetBackend()
-    const sub = backendApi.api.core.subscribeRecentRooms({})
-    sub.on('data', (res) => {
-      console.log('[SUBSCRIBE_RECENT_ROOM] trigger', res.length)
-    })
-  }
-
-  const getAllRooms = async () => {
-    console.log('[GET_RECENT_ROOMS] start')
-    const backendApi = getKeetBackend()
-    const allRooms = await backendApi.api.core.getRecentRooms({})
-    console.log('[GET_RECENT_ROOMS] response', allRooms.length)
-  }
-
-  React.useEffect(() => {
-    async function load() {
-      try {
-        await loadWorklet()
-        await subscribeRecentRooms()
-        await getAllRooms()
-        await getStats()
-        await createTestRoom()
-      } catch (e) {
-        console.log(e)
-      }
-    }
-    load()
-  }, [])
-
-  return null
-}
 
 const createTestRoom = async () => {
   try {
-    const backendApi = getKeetBackend()
     const title = 'MyRoom' + Math.round(Math.random() * 100)
     console.log('[CREATE ROOM] start', title)
-    const roomId = await backendApi.api.core.createRoom({
+    const roomId = await _backend.core.createRoom({
       config: {
         title,
         description: 'Room description',
@@ -102,4 +72,89 @@ const createTestRoom = async () => {
 }
 
 
-export default TestApp
+const getIdentity = async () => {
+  try {
+    const identity = await _backend.core.getIdentity();
+    console.log('identity', identity);
+  } catch (e) {
+    console.log('identity error', e);
+  }
+};
+
+const subscribeAllRooms = async () => {
+  console.log('[SUBSCRIBE_RECENT_ROOM] start')
+  const sub = _backend.core.subscribeRecentRooms({});
+  sub.on('data', res => {
+    console.log('[SUBSCRIBE_RECENT_ROOM] trigger', res.length)
+  });
+};
+
+
+const loadAllRooms = async () => {
+  console.log('[GET_RECENT_ROOMS] start')
+  const allRooms = await _backend.core.getRecentRooms({})
+  console.log('[GET_RECENT_ROOMS] response', allRooms.length)
+}
+
+const TestApp = () => {
+
+  React.useEffect(() => {
+
+    const run = async () => {
+      try {
+        await startWorklet()
+        await new Promise(resolve => setTimeout(resolve, 100))
+        await subscribeAllRooms()
+        await loadAllRooms()
+        await getStats()
+        await createTestRoom()
+      } catch (e) {
+        console.log(e)
+      }
+    }
+
+    run()
+  }, []);
+
+  return (
+    <View
+      style={{
+        flex: 1,
+        paddingTop: 30,
+        paddingHorizontal: 16,
+      }}>
+      <Button
+        onPress={getStats}
+        text="Get stats"
+      />
+      <Button
+        text="Create room"
+        onPress={createTestRoom}
+      />
+
+      <Button
+        text="Get network"
+        onPress={async () => {
+          console.log('get network');
+          const network = await _backend.network.query();
+          console.log('network is', network);
+        }}
+      />
+
+      <Button
+        text="Get identity"
+        onPress={getIdentity}
+      />
+      <Button
+        onPress={loadAllRooms}
+        text="Get all rooms"
+      />
+      <Button
+        text="Subscribe all rooms"
+        onPress={subscribeAllRooms}
+      />
+    </View>
+  );
+};
+
+export default TestApp;
